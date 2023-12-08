@@ -40,7 +40,7 @@ def load_data(dataset=1) -> tuple:
 
     return X, y
 
-def split_data(X, y, train_percent: int, dev_percent: int) -> tuple:
+def split_data(X, y, train_percent: int, dev_percent: int, shuffle=True) -> tuple:
     """
     Split the data into training, development, and testing sets.
 
@@ -61,7 +61,9 @@ def split_data(X, y, train_percent: int, dev_percent: int) -> tuple:
 
     # Shuffle and split the data
     indices = np.arange(X.shape[0])
-    np.random.shuffle(indices)
+
+    if shuffle:
+        np.random.shuffle(indices)
 
     train_end = int(train_percent / 100 * X.shape[0])
     dev_end = train_end + int(dev_percent / 100 * X.shape[0])

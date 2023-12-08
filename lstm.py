@@ -109,6 +109,21 @@ def evaluate(model, iterator, criterion, device):
     precision, recall, f1, _ = precision_recall_fscore_support(all_y, all_preds, average='binary')
     return epoch_loss / len(iterator), accuracy, precision, recall, f1
 
+
+def load_hyperparameters(model_id, json_path):
+    """
+    Load hyperparameters for a given model ID from a JSON file.
+    """
+    if not os.path.exists(json_path):
+        raise FileNotFoundError(f"No hyperparameters file found at {json_path}")
+
+    with open(json_path, 'r') as file:
+        data = json.load(file)
+        if model_id not in data:
+            raise ValueError(f"No hyperparameters found for model ID {model_id}")
+
+    return data[model_id]
+
 def save_hyperparameters(model_id, hyperparameters, json_path):
     # Check if the JSON file already exists
     if os.path.exists(json_path):
@@ -125,12 +140,13 @@ def save_hyperparameters(model_id, hyperparameters, json_path):
     with open(json_path, 'w') as file:
         json.dump(data, file, indent=4)
 
+
 def main():
     start_time = time.time()
 
     # Load the data
     X, y = load_data(dataset=OPT.dataset)
-    X_train, y_train, X_dev, y_dev, X_test, y_test = split_data(X, y, train_percent=70, dev_percent=10)
+    X_train, y_train, X_dev, y_dev, X_test, y_test = split_data(X, y, train_percent=70, dev_percent=10, shuffle=False)
 
     # Build vocabulary
     vocab = build_vocab(X_train)
@@ -156,26 +172,27 @@ def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Using device: {device}")
 
-    embedding_matrix = None
-    # if we use exiting word_vectors, initialize embedding matrix
-    if OPT.use_pretrained_embeddings:
-        WORD_VEC = "word2vec-google-news-300" # using Google's pre-trained Word2Vec
-        print(f"We initialize our word vector to {WORD_VEC}")
-
-        word_vectors = api.load(WORD_VEC)
-        embedding_matrix = torch.zeros((vocab_size, embedding_dim))
-        for word, idx in vocab.get_stoi().items():
-            try:
-                embedding_matrix[idx] = torch.from_numpy(word_vectors[word].copy())
-            except KeyError:
-                pass  # For words not in the pre-trained model, embeddings remain zero
-
-    model = LSTMClassifier(vocab_size, embedding_dim, OPT.hidden_dim, output_dim, n_layers, bidirectional, OPT.dropout_prob, embedding_matrix)
-    model = model.to(device)
     criterion = nn.BCEWithLogitsLoss()
 
-    # if we didn't specify any existing model to use
+    # if we didn't specify any existing model to use, we train our model
     if not OPT.model:
+        embedding_matrix = None
+        # if we use exiting word_vectors, initialize embedding matrix
+        if OPT.use_pretrained_embeddings:
+            WORD_VEC = "word2vec-google-news-300" # using Google's pre-trained Word2Vec
+            print(f"We initialize our word vector to {WORD_VEC}")
+
+            word_vectors = api.load(WORD_VEC)
+            embedding_matrix = torch.zeros((vocab_size, embedding_dim))
+            for word, idx in vocab.get_stoi().items():
+                try:
+                    embedding_matrix[idx] = torch.from_numpy(word_vectors[word].copy())
+                except KeyError:
+                    pass  # For words not in the pre-trained model, embeddings remain zero
+
+        model = LSTMClassifier(vocab_size, embedding_dim, OPT.hidden_dim, output_dim, n_layers, bidirectional, OPT.dropout_prob, embedding_matrix)
+        model = model.to(device)
+
         print(f"Start training the model for {OPT.num_epochs} episodes")
         
         optimizer = optim.Adam(model.parameters(), lr=OPT.learning_rate)
@@ -189,9 +206,23 @@ def main():
             # scheduler.step()
     # if we use an existing model that has been trained before
     else:
+        model_id = OPT.model
+        JSON_PATH = "models/models_hyperparameters.json"
+        hyperparams = load_hyperparameters(model_id, JSON_PATH)
+
+        # Use hyperparameters to configure the model
+        embedding_dim = hyperparams['embedding_dim']
+        hidden_dim = hyperparams['hidden_dim']
+        n_layers = hyperparams.get('n_layers', 2)  # Default to 2 if not specified
+        bidirectional = hyperparams.get('bidirectional', True)  # Default to True
+        dropout = hyperparams.get('dropout_prob', 0.3)  # Default to 0.3
+
+        model = LSTMClassifier(vocab_size, embedding_dim, hidden_dim, output_dim, n_layers, bidirectional, dropout)
+        model = model.to(device)
+
         PATH = f"models/{OPT.model}.pth"
-        print(f"Using saved model at {PATH}")
         model.load_state_dict(torch.load(PATH))
+        print(f"Using saved model at {PATH}")
 
     # Evaluate on test set
     test_loss, test_acc, test_prec, test_rec, test_f1 = evaluate(model, test_loader, criterion, device)
