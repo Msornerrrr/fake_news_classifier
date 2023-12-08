@@ -1,5 +1,8 @@
 import argparse
 import time
+import datetime
+import json
+import os
 
 import torch
 import torch.nn as nn
@@ -8,6 +11,8 @@ from torch.utils.data import Dataset, DataLoader
 from torchtext.data.utils import get_tokenizer
 from torchtext.vocab import build_vocab_from_iterator
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
+import gensim.downloader as api
+from gensim.models import KeyedVectors
 
 from data_loader import load_data, split_data
 
@@ -55,9 +60,11 @@ class NewsDataset(Dataset):
         return torch.tensor(padded_text, dtype=torch.long), torch.tensor(self.y[idx], dtype=torch.long)
 
 class LSTMClassifier(nn.Module):
-    def __init__(self, vocab_size, embedding_dim, hidden_dim, output_dim, n_layers, bidirectional, dropout):
+    def __init__(self, vocab_size, embedding_dim, hidden_dim, output_dim, n_layers, bidirectional, dropout, embedding_matrix=None):
         super(LSTMClassifier, self).__init__()
         self.embedding = nn.Embedding(vocab_size, embedding_dim)
+        if embedding_matrix is not None:
+            self.embedding.weight.data.copy_(embedding_matrix)
         self.lstm = nn.LSTM(embedding_dim, hidden_dim, num_layers=n_layers, bidirectional=bidirectional, dropout=dropout, batch_first=True)
         self.fc = nn.Linear(hidden_dim * 2 if bidirectional else hidden_dim, output_dim)
         self.dropout = nn.Dropout(dropout)
@@ -102,6 +109,22 @@ def evaluate(model, iterator, criterion, device):
     precision, recall, f1, _ = precision_recall_fscore_support(all_y, all_preds, average='binary')
     return epoch_loss / len(iterator), accuracy, precision, recall, f1
 
+def save_hyperparameters(model_id, hyperparameters, json_path):
+    # Check if the JSON file already exists
+    if os.path.exists(json_path):
+        # Read the existing data
+        with open(json_path, 'r') as file:
+            data = json.load(file)
+    else:
+        data = {}
+
+    # Update with new model's hyperparameters
+    data[model_id] = hyperparameters
+
+    # Write back to the JSON file
+    with open(json_path, 'w') as file:
+        json.dump(data, file, indent=4)
+
 def main():
     start_time = time.time()
 
@@ -118,47 +141,100 @@ def main():
     test_dataset = NewsDataset(X_test, y_test, vocab)
 
     # Create data loaders
-    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
-    dev_loader = DataLoader(dev_dataset, batch_size=32, shuffle=False)
-    test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
+    train_loader = DataLoader(train_dataset, batch_size=OPT.batch_size, shuffle=True)
+    dev_loader = DataLoader(dev_dataset, batch_size=OPT.batch_size, shuffle=False)
+    test_loader = DataLoader(test_dataset, batch_size=OPT.batch_size, shuffle=False)
     print(f"Finished loading data & data preprocessing")
 
+    # model hyperparameters
     vocab_size = len(vocab)  # Size of your vocabulary
-    embedding_dim = 100  # Size of each embedding vector
-    hidden_dim = 256  # Number of features in the hidden state of the LSTM
+    embedding_dim = 300  # Size of each embedding vector
     output_dim = 1  # Binary classification (fake or real)
     n_layers = 2  # Number of LSTM layers
     bidirectional = True  # Use a bidirectional LSTM
-    dropout = 0.5  # Dropout for regularization
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Using device: {device}")
 
-    model = LSTMClassifier(vocab_size, embedding_dim, hidden_dim, output_dim, n_layers, bidirectional, dropout)
+    embedding_matrix = None
+    # if we use exiting word_vectors, initialize embedding matrix
+    if OPT.use_pretrained_embeddings:
+        WORD_VEC = "word2vec-google-news-300" # using Google's pre-trained Word2Vec
+        print(f"We initialize our word vector to {WORD_VEC}")
+
+        word_vectors = api.load(WORD_VEC)
+        embedding_matrix = torch.zeros((vocab_size, embedding_dim))
+        for word, idx in vocab.get_stoi().items():
+            try:
+                embedding_matrix[idx] = torch.from_numpy(word_vectors[word].copy())
+            except KeyError:
+                pass  # For words not in the pre-trained model, embeddings remain zero
+
+    model = LSTMClassifier(vocab_size, embedding_dim, OPT.hidden_dim, output_dim, n_layers, bidirectional, OPT.dropout_prob, embedding_matrix)
     model = model.to(device)
-
-    optimizer = optim.Adam(model.parameters(), lr=1e-3)
-    scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
     criterion = nn.BCEWithLogitsLoss()
-    print(f"Finished creating model, optimizer, and criterion")
 
-    num_epochs = 5
-    for epoch in range(num_epochs):
-        train_loss = train(model, train_loader, optimizer, criterion, device)
-        dev_loss, dev_acc, dev_prec, dev_rec, dev_f1 = evaluate(model, dev_loader, criterion, device)
-        print(f'Epoch: {epoch+1}, Train Loss: {train_loss:.4f}, Val. Loss: {dev_loss:.4f}, Val. Acc: {dev_acc:.4f}, Precision: {dev_prec:.4f}, Recall: {dev_rec:.4f}, F1: {dev_f1:.4f}')
+    # if we didn't specify any existing model to use
+    if not OPT.model:
+        print(f"Start training the model for {OPT.num_epochs} episodes")
+        
+        optimizer = optim.Adam(model.parameters(), lr=OPT.learning_rate)
+        scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
 
-        # scheduler.step()
+        for epoch in range(OPT.num_epochs):
+            train_loss = train(model, train_loader, optimizer, criterion, device)
+            dev_loss, dev_acc, dev_prec, dev_rec, dev_f1 = evaluate(model, dev_loader, criterion, device)
+            print(f'Epoch: {epoch+1}, Train Loss: {train_loss:.4f}, Val. Loss: {dev_loss:.4f}, Val. Acc: {dev_acc:.4f}, Precision: {dev_prec:.4f}, Recall: {dev_rec:.4f}, F1: {dev_f1:.4f}')
+            
+            # scheduler.step()
+    # if we use an existing model that has been trained before
+    else:
+        PATH = f"models/{OPT.model}.pth"
+        print(f"Using saved model at {PATH}")
+        model.load_state_dict(torch.load(PATH))
 
     # Evaluate on test set
     test_loss, test_acc, test_prec, test_rec, test_f1 = evaluate(model, test_loader, criterion, device)
     print(f'Test Loss: {test_loss:.4f}, Test Acc: {test_acc:.4f}, Precision: {test_prec:.4f}, Recall: {test_rec:.4f}, F1: {test_f1:.4f}')
+
+    # if we decide to save our model
+    if OPT.save:
+        # create model unique id from current time
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        model_id = f"LSTM_{timestamp}"
+
+        PATH = f"models/{model_id}.pth"
+        torch.save(model.state_dict(), PATH)
+        print(f"Model saved to {PATH}")
+
+        hyperparameters = {
+            'dataset': OPT.dataset,
+            'learning_rate': OPT.learning_rate,
+            'num_epochs': OPT.num_epochs,
+            'batch_size': OPT.batch_size,
+            'hidden_dim': OPT.hidden_dim,
+            'dropout_prob': OPT.dropout_prob,
+            'use_pretrained_embeddings': OPT.use_pretrained_embeddings,
+            'embedding_dim': embedding_dim
+        }
+        JSON_PATH = "models/models_hyperparameters.json"
+        
+        save_hyperparameters(model_id, hyperparameters, JSON_PATH)
+        print(f"Model hyperparameters saved to {JSON_PATH}")
 
     print(f"Total time taken: {time.time() - start_time:.2f} seconds")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='LSTM Classifier for Fake News Detection')
     parser.add_argument('--dataset', '-d', help='Choose dataset to use', choices=[1, 2, 3], type=int, default=3)
+    parser.add_argument('--learning_rate', '-r', type=float, default=1e-3)
+    parser.add_argument('--num_epochs', '-T', help='Choose number of episode', type=int, default=5)
+    parser.add_argument('--batch_size', '-b', help='Choose number of batches', type=int, default=32)
+    parser.add_argument('--hidden_dim', '-i', type=int, default=256)
+    parser.add_argument('--dropout_prob', '-p', type=float, default=0.3)
+    parser.add_argument('--use_pretrained_embeddings', action='store_true', help='Whether we use pretrained word vector')
+    parser.add_argument('--model', '-m', help='Select path to existing model', type=str, default=None)
+    parser.add_argument('--save', action='store_true', help='Whether we save our model')
     OPT = parser.parse_args()
 
     main()
