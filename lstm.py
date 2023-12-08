@@ -93,11 +93,11 @@ def evaluate(model, iterator, criterion, device):
             text, labels = batch
             text, labels = text.to(device), labels.to(device)  # Move data to the device
 
-            predictions = model(batch[0]).squeeze(1)
+            predictions = model(text).squeeze(1)
             loss = criterion(predictions, labels.float())
             epoch_loss += loss.item()
             all_preds.extend(torch.sigmoid(predictions).round().cpu().numpy())
-            all_y.extend(batch[1].cpu().numpy())
+            all_y.extend(labels.cpu().numpy())
     accuracy = accuracy_score(all_y, all_preds)
     precision, recall, f1, _ = precision_recall_fscore_support(all_y, all_preds, average='binary')
     return epoch_loss / len(iterator), accuracy, precision, recall, f1
