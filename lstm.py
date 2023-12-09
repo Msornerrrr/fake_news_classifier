@@ -17,6 +17,7 @@ from gensim.models import KeyedVectors
 from data_loader import load_data, split_data
 
 OPT = None
+JSON_PATH = "models/models_hyperparameters.json"
 
 
 def tokenize(text):
@@ -174,6 +175,8 @@ def main():
 
     criterion = nn.BCEWithLogitsLoss()
 
+    train_dev_performance = [] # List of dictionaries containing training and development performance
+
     # if we didn't specify any existing model to use, we train our model
     if not OPT.model:
         embedding_matrix = None
@@ -201,13 +204,21 @@ def main():
         for epoch in range(OPT.num_epochs):
             train_loss = train(model, train_loader, optimizer, criterion, device)
             dev_loss, dev_acc, dev_prec, dev_rec, dev_f1 = evaluate(model, dev_loader, criterion, device)
+            train_dev_performance.append({
+                'epoch': epoch+1,
+                'train_loss': train_loss,
+                'dev_loss': dev_loss,
+                'dev_acc': dev_acc,
+                'dev_prec': dev_prec,
+                'dev_rec': dev_rec,
+                'dev_f1': dev_f1
+            })
             print(f'Epoch: {epoch+1}, Train Loss: {train_loss:.4f}, Val. Loss: {dev_loss:.4f}, Val. Acc: {dev_acc:.4f}, Precision: {dev_prec:.4f}, Recall: {dev_rec:.4f}, F1: {dev_f1:.4f}')
             
             # scheduler.step()
     # if we use an existing model that has been trained before
     else:
         model_id = OPT.model
-        JSON_PATH = "models/models_hyperparameters.json"
         hyperparams = load_hyperparameters(model_id, JSON_PATH)
 
         # Use hyperparameters to configure the model
@@ -221,11 +232,18 @@ def main():
         model = model.to(device)
 
         PATH = f"models/{OPT.model}.pth"
-        model.load_state_dict(torch.load(PATH))
+        model.load_state_dict(torch.load(PATH, map_location=device))
         print(f"Using saved model at {PATH}")
 
     # Evaluate on test set
     test_loss, test_acc, test_prec, test_rec, test_f1 = evaluate(model, test_loader, criterion, device)
+    test_performance = {
+        'test_loss': test_loss,
+        'test_acc': test_acc,
+        'test_prec': test_prec,
+        'test_rec': test_rec,
+        'test_f1': test_f1
+    }
     print(f'Test Loss: {test_loss:.4f}, Test Acc: {test_acc:.4f}, Precision: {test_prec:.4f}, Recall: {test_rec:.4f}, F1: {test_f1:.4f}')
 
     # if we decide to save our model
@@ -246,9 +264,12 @@ def main():
             'hidden_dim': OPT.hidden_dim,
             'dropout_prob': OPT.dropout_prob,
             'use_pretrained_embeddings': OPT.use_pretrained_embeddings,
-            'embedding_dim': embedding_dim
+            'embedding_dim': embedding_dim,
+            'performance': {
+                'train_dev': train_dev_performance,
+                'test': test_performance
+            }
         }
-        JSON_PATH = "models/models_hyperparameters.json"
         
         save_hyperparameters(model_id, hyperparameters, JSON_PATH)
         print(f"Model hyperparameters saved to {JSON_PATH}")
