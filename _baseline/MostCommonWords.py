@@ -1,7 +1,7 @@
 from collections import Counter
 import numpy as np
 
-from baseline.BaseModel import BaseModel
+from _baseline.BaseModel import BaseModel
 
 class MostCommonWords(BaseModel):
     def __init__(self, top_n=10, title_weight=0.7, text_weight=0.3) -> None:

@@ -1,4 +1,4 @@
-_import argparse
+import argparse
 import time
 
 from sklearn.metrics import accuracy_score
@@ -160,7 +160,7 @@ def main():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Baseline Classifiers for Fake News Detection')
-    parser.add_argument('--method', '-m', help='Choose baseline method to run', choices=['MostCommonWords', 'NumPunctuation', 'NumCaps'])
+    parser.add_argument('--method', '-m', help='Choose baseline method to run', choices=['MostCommonWords', 'NumPunctuation', 'NumCaps'], required=True)
     parser.add_argument('--dataset', '-d', help='Choose dataset to use', choices=[1, 2, 3], type=int, default=2)
     OPT = parser.parse_args()
 

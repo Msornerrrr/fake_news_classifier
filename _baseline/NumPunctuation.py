@@ -1,6 +1,6 @@
 import math
 
-from baseline.BaseModel import BaseModel
+from _baseline.BaseModel import BaseModel
 
 class NumPunctuation(BaseModel):
     def __init__(self, punctuations=['!', '?', '#']) -> None:
