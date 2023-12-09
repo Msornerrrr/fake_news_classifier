@@ -1,4 +1,4 @@
-import argparse
+_import argparse
 import time
 
 from sklearn.metrics import accuracy_score
@@ -7,9 +7,9 @@ import seaborn as sns
 import pandas as pd
 
 from util.data_loader import load_data, split_data
-from baseline.MostCommonWords import MostCommonWords
-from baseline.NumPunctuation import NumPunctuation
-from baseline.NumCaps import NumCaps
+from _baseline.MostCommonWords import MostCommonWords
+from _baseline.NumPunctuation import NumPunctuation
+from _baseline.NumCaps import NumCaps
 
 OPT = None
 

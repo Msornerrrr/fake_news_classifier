@@ -8,10 +8,10 @@ from torch.nn import BCEWithLogitsLoss
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 
 from util.json_io import load_json_with_key, add_json_with_key
-from lstm.embedding import create_embedding_matrix
-from lstm.plot import plot_model_info
-from lstm.data_loader import get_data_loader
-from lstm.model import LSTMClassifier
+from _lstm.embedding import create_embedding_matrix
+from _lstm.plot import plot_model_info
+from _lstm.data_loader import get_data_loader
+from _lstm.model import LSTMClassifier
 
 # Global variables
 model_info_path = "models/models_info.json"
