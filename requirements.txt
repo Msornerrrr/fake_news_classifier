@@ -5,5 +5,4 @@ torch
 matplotlib
 seaborn
 torchtext
-# nltk
 gensim

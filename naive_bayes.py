@@ -5,7 +5,7 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 
-from data_loader import load_data, split_data
+from util.data_loader import load_data, split_data
 
 OPT = None
 default_alpha_values = [1000,100,10,1,0.1,1e-2,1e-3,1e-4,1e-5,1e-6,1e-7]
@@ -57,7 +57,7 @@ def main():
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Naive Bayes Classifier for Fake News Detection')
     parser.add_argument('--alpha', nargs='+', type=float, help='List of alpha values for hyperparameter tuning', default=default_alpha_values)
-    parser.add_argument('--dataset', '-d', help='Choose dataset to use', choices=[1, 2, 3], type=int, default=3)
+    parser.add_argument('--dataset', '-d', help='Choose dataset to use', choices=[1, 2, 3], type=int, default=2)
     OPT = parser.parse_args()
     
     main()
