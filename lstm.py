@@ -96,7 +96,7 @@ def train_model(OPT, device):
             'dev_rec': dev_rec,
             'dev_f1': dev_f1
         })
-        print(f'Epoch: {epoch+1}, Train Loss: {train_loss:.4f}, Val. Loss: {dev_loss:.4f}, Val. Acc: {dev_acc:.4f}, Precision: {dev_prec:.4f}, Recall: {dev_rec:.4f}, F1: {dev_f1:.4f}')
+        print(f'Epoch: {epoch+1}, Train Loss: {train_loss:.4f}, Dev Loss: {dev_loss:.4f}, Dev Acc: {dev_acc:.4f}, Precision: {dev_prec:.4f}, Recall: {dev_rec:.4f}, F1: {dev_f1:.4f}')
         
         # scheduler.step()
 
@@ -223,7 +223,7 @@ def main():
     train_parser.add_argument('--num_epochs', '-T', help='Choose number of episode', type=int, default=5)
     train_parser.add_argument('--hidden_dim', '-hd', type=int, default=256)
     train_parser.add_argument('--dropout_prob', '-dp', type=float, default=0.3)
-    train_parser.add_argument('--use_pretrained_embeddings', action='store_true', help='Whether we use pretrained word vector')
+    train_parser.add_argument('--use_pretrained_embeddings', '-pe', action='store_true', help='Whether we use pretrained word vector')
     train_parser.add_argument('--save', '-s', action='store_true', help='Whether we save our model')
 
     # Subparser for running existing model
