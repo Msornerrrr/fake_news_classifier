@@ -139,7 +139,7 @@ def save_hyperparameters(model_id, hyperparameters, json_path):
 
     # Write back to the JSON file
     with open(json_path, 'w') as file:
-        json.dump(data, file, indent=4)
+        json.dump(data, file, indent=2)
 
 
 def main():
@@ -286,7 +286,7 @@ if __name__ == '__main__':
     parser.add_argument('--dropout_prob', '-p', type=float, default=0.3)
     parser.add_argument('--use_pretrained_embeddings', action='store_true', help='Whether we use pretrained word vector')
     parser.add_argument('--model', '-m', help='Select path to existing model', type=str, default=None)
-    parser.add_argument('--save', action='store_true', help='Whether we save our model')
+    parser.add_argument('--save', '-s', action='store_true', help='Whether we save our model')
     OPT = parser.parse_args()
 
     main()
