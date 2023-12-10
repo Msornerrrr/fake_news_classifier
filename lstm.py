@@ -1,11 +1,12 @@
 import argparse
 import time
 import datetime
+from matplotlib import cm
 
 import torch
 import torch.optim as optim
 from torch.nn import BCEWithLogitsLoss
-from sklearn.metrics import accuracy_score, precision_recall_fscore_support
+from sklearn.metrics import accuracy_score, confusion_matrix, precision_recall_fscore_support
 
 from util.json_io import load_json_with_key, add_json_with_key
 from _lstm.embedding import create_embedding_matrix
@@ -46,7 +47,8 @@ def evaluate(model, iterator, criterion, device):
             all_y.extend(labels.cpu().numpy())
     accuracy = accuracy_score(all_y, all_preds)
     precision, recall, f1, _ = precision_recall_fscore_support(all_y, all_preds, average='binary')
-    return epoch_loss / len(iterator), accuracy, precision, recall, f1
+    cm = confusion_matrix(all_y, all_preds)
+    return epoch_loss / len(iterator), accuracy, precision, recall, f1, cm
 
 
 def train_model(OPT, device, model_info_path):
@@ -113,7 +115,7 @@ def train_model(OPT, device, model_info_path):
 
     if not OPT.notest:
         # Evaluate on test set
-        test_loss, test_acc, test_prec, test_rec, test_f1 = evaluate(model, test_loader, criterion, device)
+        test_loss, test_acc, test_prec, test_rec, test_f1, test_cm = evaluate(model, test_loader, criterion, device)
         test_performance = {
             'test_datetime': datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"),
             'test_dataset': OPT.dataset,
@@ -125,6 +127,7 @@ def train_model(OPT, device, model_info_path):
         }
         model_info['performance']['test'].append(test_performance)
         print(f'Test Loss: {test_loss:.4f}, Test Acc: {test_acc:.4f}, Precision: {test_prec:.4f}, Recall: {test_rec:.4f}, F1: {test_f1:.4f}')
+        print(f'Confusion Matrix:\n{test_cm}')
 
     # if we decide to save our model
     if OPT.save:
@@ -171,7 +174,7 @@ def run_model(OPT, device, model_info_path):
         print(f"Using saved model at {PATH}")
 
         # Evaluate on test set
-        test_loss, test_acc, test_prec, test_rec, test_f1 = evaluate(model, test_loader, criterion, device)
+        test_loss, test_acc, test_prec, test_rec, test_f1, test_cm = evaluate(model, test_loader, criterion, device)
         test_performance = {
             'test_datetime': datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"),
             'test_dataset': OPT.dataset,
@@ -183,6 +186,7 @@ def run_model(OPT, device, model_info_path):
         }
         model_info['performance']['test'].append(test_performance)
         print(f'Test Loss: {test_loss:.4f}, Test Acc: {test_acc:.4f}, Precision: {test_prec:.4f}, Recall: {test_rec:.4f}, F1: {test_f1:.4f}')
+        print(f'Confusion Matrix:\n{test_cm}')
 
         add_json_with_key(model_info, model_info_path, model_id)
         print(f"Model info saved to {model_info_path}")
