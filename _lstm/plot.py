@@ -68,8 +68,13 @@ def plot_model_info(model_id, model_info, save=True):
     print(pd.DataFrame(hyperparameters.items(), columns=['Parameter', 'Value']))
 
 
-def plot_hyperparameter_tuning(model_info_path, hyperparameter_name, default_hyperparameters, save=True):
-   # Load all model information
+def plot_hyperparameter_tuning(
+        model_info_path, 
+        hyperparameter_name, 
+        default_hyperparameters, 
+        metrics=['dev_acc', 'dev_f1'],
+        save=True):
+    # Load all model information
     all_model_info = load_json(model_info_path)
 
     # Filter models based on criteria
@@ -87,28 +92,32 @@ def plot_hyperparameter_tuning(model_info_path, hyperparameter_name, default_hyp
         return
 
     # Prepare data for plotting
+    plot_data = {metric: [] for metric in metrics}
     hyperparameter_values = []
-    dev_performance = []
 
     for model_id, model_info in filtered_models.items():
         hyperparameter_values.append(model_info['hyperparameters'][hyperparameter_name])
-        dev_performance.append(max([epoch['dev_acc'] for epoch in model_info['performance']['train_dev']]))
+        for metric in metrics:
+            plot_data[metric].append(max([epoch[metric] for epoch in model_info['performance']['train_dev']]))
 
     # Create DataFrame for plotting
-    df = pd.DataFrame({
-        'Hyperparameter Value': hyperparameter_values,
-        'Development Accuracy': dev_performance
-    })
+    df = pd.DataFrame({'Hyperparameter Value': hyperparameter_values})
+    for metric in metrics:
+        df[metric] = plot_data[metric]
 
     # Sort DataFrame based on hyperparameter value
     df = df.sort_values(by='Hyperparameter Value')
 
     # Plotting
     plt.figure(figsize=(10, 5))
-    plt.plot(df['Hyperparameter Value'], df['Development Accuracy'], marker='o')
+    for metric in metrics:
+        plt.plot(df['Hyperparameter Value'], df[metric], marker='o', label=metric)
+        for x, y in zip(df['Hyperparameter Value'], df[metric]):
+            plt.text(x, y, f'{y:.5f}', ha='center', va='bottom')
     plt.xlabel(hyperparameter_name)
-    plt.ylabel('Development Accuracy')
-    plt.title(f'Effect of {hyperparameter_name} on Development Performance')
+    plt.ylabel('Metric Value')
+    plt.title(f'Effect of {hyperparameter_name} on Performance Metrics')
+    plt.legend()
     plt.grid(True)
     if save:
         plt.savefig(f'figures/LSTM_hyperparameter_tuning-{hyperparameter_name}.png')

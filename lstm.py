@@ -240,6 +240,7 @@ def main():
     # Subparser for hyperparameter tuning
     tune_parser = subparsers.add_parser('tune', parents=[parent_parser], help='Hyperparameter tuning')
     tune_parser.add_argument('--hyperparameter', '-hp', required=True, help='Hyperparameter to tune', choices=default_hyperparameters.keys())
+    tune_parser.add_argument('--metrics', '-me', nargs='+', help='Metrics to plot', choices=['dev_acc', 'dev_prec', 'dev_rec', 'dev_f1'], default=['dev_acc', 'dev_f1'])
     
     OPT = parser.parse_args()
 
@@ -249,7 +250,7 @@ def main():
     elif OPT.mode == 'run':
         run_model(OPT, device, model_info_path)
     elif OPT.mode == 'tune':
-        plot_hyperparameter_tuning(model_info_path, OPT.hyperparameter, default_hyperparameters)
+        plot_hyperparameter_tuning(model_info_path, OPT.hyperparameter, default_hyperparameters, metrics=OPT.metrics)
     else:
         print("Invalid mode")
         parser.print_help()
