@@ -53,7 +53,7 @@ def evaluate(model, iterator, criterion, device):
 
 def train_model(OPT, device, model_info_path):
     # Load the data
-    train_loader, dev_loader, test_loader, vocab = get_data_loader(OPT.batch_size, dataset=OPT.dataset)
+    train_loader, dev_loader, test_loader, vocab = get_data_loader(OPT.batch_size, dataset=OPT.dataset, seed=OPT.seed)
 
     # initialize model
     model_id = None
@@ -79,7 +79,7 @@ def train_model(OPT, device, model_info_path):
 
     for epoch in range(OPT.num_epochs):
         train_loss = train(model, train_loader, optimizer, criterion, device)
-        dev_loss, dev_acc, dev_prec, dev_rec, dev_f1 = evaluate(model, dev_loader, criterion, device)
+        dev_loss, dev_acc, dev_prec, dev_rec, dev_f1, _ = evaluate(model, dev_loader, criterion, device)
         train_dev_performance.append({
             'epoch': epoch+1,
             'train_loss': train_loss,
@@ -156,7 +156,7 @@ def run_model(OPT, device, model_info_path):
 
     if not OPT.notest:
         criterion = BCEWithLogitsLoss() # Loss function
-        _, _, test_loader, vocab = get_data_loader(OPT.batch_size, dataset=OPT.dataset)
+        _, _, test_loader, vocab = get_data_loader(OPT.batch_size, dataset=OPT.dataset, seed=OPT.seed)
 
         vocab_size = len(vocab)
         embedding_dim = model_info['hyperparameters']['embedding_dim']
@@ -216,6 +216,7 @@ def main():
 
     # Parent parser for shared arguments
     parent_parser = argparse.ArgumentParser(add_help=False)
+    parent_parser.add_argument('--seed', '-sd', help='Random seed', type=int, default=42)
     parent_parser.add_argument('--dataset', '-d', help='Choose dataset to use', choices=[1, 2, 3], type=int, default=default_dataset)
     parent_parser.add_argument('--batch_size', '-b', help='Choose number of batches', type=int, default=default_hyperparameters['batch_size'])
     parent_parser.add_argument('--notest', '-nt', action='store_true', help='Whether we don\'t evaluate on test set')
@@ -234,7 +235,7 @@ def main():
     train_parser.add_argument('--use_pretrained_embeddings', '-pe', action='store_true', help='Whether we use pretrained word vector')
     train_parser.add_argument('--embedding_dim', '-ed', type=int, default=default_hyperparameters['embedding_dim'])
     train_parser.add_argument('--n_layers', '-nl', type=int, default=default_hyperparameters['n_layers'])
-    train_parser.add_argument('--bidirectional', '-bi', action='store_true', help='Whether we use bidirectional LSTM')
+    train_parser.add_argument('--bidirectional', '-bi', action='store_false', help='Whether we use bidirectional LSTM')
     train_parser.add_argument('--save', '-s', action='store_true', help='Whether we save our model')
 
     # Subparser for running existing model

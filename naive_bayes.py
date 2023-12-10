@@ -15,7 +15,7 @@ def main():
     
     # Load the data
     X, y = load_data(dataset=OPT.dataset)
-    X_train, y_train, X_dev, y_dev, X_test, y_test = split_data(X, y, train_percent=70, dev_percent=10)
+    X_train, y_train, X_dev, y_dev, X_test, y_test = split_data(X, y, train_percent=70, dev_percent=10, seed=OPT.seed)
 
     # Convert the 'title' and 'text' fields from training data into a matrix of token counts
     print("Vectorizing the data...")
@@ -56,6 +56,7 @@ def main():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Naive Bayes Classifier for Fake News Detection')
+    parser.add_argument('--seed', '-sd', help='Random seed', type=int, default=42)
     parser.add_argument('--alpha', nargs='+', type=float, help='List of alpha values for hyperparameter tuning', default=default_alpha_values)
     parser.add_argument('--dataset', '-d', help='Choose dataset to use', choices=[1, 2, 3], type=int, default=2)
     OPT = parser.parse_args()

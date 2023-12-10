@@ -126,7 +126,7 @@ def main():
     start_time = time.time()
 
     X, y = load_data(dataset=OPT.dataset)    
-    X_train, y_train, X_dev, y_dev, X_test, y_test = split_data(X, y, 70, 10)
+    X_train, y_train, X_dev, y_dev, X_test, y_test = split_data(X, y, 70, 10, seed=OPT.seed)
     best_settings = None
 
     if OPT.method == 'MostCommonWords':
@@ -160,6 +160,7 @@ def main():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Baseline Classifiers for Fake News Detection')
+    parser.add_argument('--seed', '-sd', help='Random seed', type=int, default=42)
     parser.add_argument('--method', '-m', help='Choose baseline method to run', choices=['MostCommonWords', 'NumPunctuation', 'NumCaps'], required=True)
     parser.add_argument('--dataset', '-d', help='Choose dataset to use', choices=[1, 2, 3], type=int, default=2)
     OPT = parser.parse_args()

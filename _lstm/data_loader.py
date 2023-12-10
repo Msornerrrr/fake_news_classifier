@@ -45,10 +45,10 @@ class NewsDataset(Dataset):
         padded_text = vectorized_text[:self.seq_length] + [stoi['<pad>']] * max(0, self.seq_length - len(vectorized_text))
         return torch.tensor(padded_text, dtype=torch.long), torch.tensor(self.y[idx], dtype=torch.long)
     
-def get_data_loader(batch_size, dataset=2):
+def get_data_loader(batch_size, dataset=2, seed=42):
     # Load the data
     X, y = load_data(dataset=dataset)
-    X_train, y_train, X_dev, y_dev, X_test, y_test = split_data(X, y, train_percent=70, dev_percent=10, shuffle=False)
+    X_train, y_train, X_dev, y_dev, X_test, y_test = split_data(X, y, train_percent=70, dev_percent=10, seed=seed)
 
     # Build vocabulary
     vocab = build_vocab(X_train)
