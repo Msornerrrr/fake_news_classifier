@@ -1,6 +1,9 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 
+from util.json_io import load_json
+
+
 def plot_model_info(model_id, model_info, save=True):
     num_epochs = model_info['hyperparameters']['num_epochs']
 
@@ -63,3 +66,50 @@ def plot_model_info(model_id, model_info, save=True):
     hyperparameters = model_info.get('hyperparameters', {})
     print("Model Hyperparameters:")
     print(pd.DataFrame(hyperparameters.items(), columns=['Parameter', 'Value']))
+
+
+def plot_hyperparameter_tuning(model_info_path, hyperparameter_name, default_hyperparameters, save=True):
+   # Load all model information
+    all_model_info = load_json(model_info_path)
+
+    # Filter models based on criteria
+    filtered_models = {}
+    for model_id, model_info in all_model_info.items():
+        hyperparameters = model_info['hyperparameters']
+        if hyperparameter_name in hyperparameters:
+            # Check if other hyperparameters are consistent with the default
+            if all(hyperparameters.get(h, default_hyperparameters[h]) == default_hyperparameters[h] for h in default_hyperparameters if h != hyperparameter_name):
+                filtered_models[model_id] = model_info
+
+    # Check if there are enough models to compare
+    if len(filtered_models) < 2:
+        print("Not enough models to compare for hyperparameter tuning.")
+        return
+
+    # Prepare data for plotting
+    hyperparameter_values = []
+    dev_performance = []
+
+    for model_id, model_info in filtered_models.items():
+        hyperparameter_values.append(model_info['hyperparameters'][hyperparameter_name])
+        dev_performance.append(max([epoch['dev_acc'] for epoch in model_info['performance']['train_dev']]))
+
+    # Create DataFrame for plotting
+    df = pd.DataFrame({
+        'Hyperparameter Value': hyperparameter_values,
+        'Development Accuracy': dev_performance
+    })
+
+    # Sort DataFrame based on hyperparameter value
+    df = df.sort_values(by='Hyperparameter Value')
+
+    # Plotting
+    plt.figure(figsize=(10, 5))
+    plt.plot(df['Hyperparameter Value'], df['Development Accuracy'], marker='o')
+    plt.xlabel(hyperparameter_name)
+    plt.ylabel('Development Accuracy')
+    plt.title(f'Effect of {hyperparameter_name} on Development Performance')
+    plt.grid(True)
+    if save:
+        plt.savefig(f'figures/LSTM_hyperparameter_tuning-{hyperparameter_name}.png')
+    plt.show()

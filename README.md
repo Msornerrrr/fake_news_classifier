@@ -102,6 +102,12 @@ python lstm.py run --model [name of model] --notest --plot
 
 I have trained multiple models (including one used in the paper), you can find them in the models subdirectory. The **models_info.json** file includes all the name, hyperparameters, and train/dev/test performance metrics.
 
+### Tune mode
+If we want to plot different models performance for different hyperparameters, we can use the tune mode to plot the figure
+```
+python lstm.py tune --hyperparameter [name of hyperparameter]
+```
+
 ## Clean up
 Feel free to remove this conda environment after running all the code
 

@@ -62,5 +62,5 @@ def get_data_loader(batch_size, dataset=2):
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     dev_loader = DataLoader(dev_dataset, batch_size=batch_size, shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
-    print(f"Finished loading data & data preprocessing")
+    print(f"Finished loading dataset {dataset} & data preprocessing")
     return train_loader, dev_loader, test_loader, vocab

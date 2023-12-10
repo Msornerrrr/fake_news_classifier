@@ -9,12 +9,10 @@ from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 
 from util.json_io import load_json_with_key, add_json_with_key
 from _lstm.embedding import create_embedding_matrix
-from _lstm.plot import plot_model_info
+from _lstm.plot import plot_model_info, plot_hyperparameter_tuning
 from _lstm.data_loader import get_data_loader
 from _lstm.model import LSTMClassifier
 
-# Global variables
-model_info_path = "models/models_info.json"
 
 def train(model, iterator, optimizer, criterion, device):
     model.train()
@@ -51,28 +49,20 @@ def evaluate(model, iterator, criterion, device):
     return epoch_loss / len(iterator), accuracy, precision, recall, f1
 
 
-def train_model(OPT, device):
+def train_model(OPT, device, model_info_path):
     # Load the data
     train_loader, dev_loader, test_loader, vocab = get_data_loader(OPT.batch_size, dataset=OPT.dataset)
-
-    # model hyperparameters
-    vocab_size = len(vocab)  # Size of your vocabulary
-    embedding_dim = 300  # Size of each embedding vector
-    hidden_dim = OPT.hidden_dim  # Size of the hidden layer output
-    n_layers = 2  # Number of LSTM layers
-    bidirectional = True  # Use a bidirectional LSTM
-    dropout_prob = OPT.dropout_prob  # Dropout probability
 
     # initialize model
     model_id = None
     model = LSTMClassifier(
-        vocab_size, 
-        embedding_dim, 
-        hidden_dim,
-        n_layers, 
-        bidirectional,
-        dropout_prob,
-        create_embedding_matrix(vocab, embedding_dim) if OPT.use_pretrained_embeddings else None
+        len(vocab), # Size of your vocabulary
+        OPT.embedding_dim, # Size of each embedding vector
+        OPT.hidden_dim, # Size of the hidden layer output
+        OPT.n_layers, # Number of LSTM layers
+        OPT.bidirectional, # Use a bidirectional LSTM
+        OPT.dropout_prob, # Dropout probability
+        create_embedding_matrix(vocab, OPT.embedding_dim) if OPT.use_pretrained_embeddings else None
     )
     model_info = {}
     criterion = BCEWithLogitsLoss()
@@ -111,9 +101,9 @@ def train_model(OPT, device):
             'hidden_dim': OPT.hidden_dim,
             'dropout_prob': OPT.dropout_prob,
             'use_pretrained_embeddings': OPT.use_pretrained_embeddings,
-            'embedding_dim': embedding_dim,
-            'n_layers': n_layers,
-            'bidirectional': bidirectional
+            'embedding_dim': OPT.embedding_dim,
+            'n_layers': OPT.n_layers,
+            'bidirectional': OPT.bidirectional
         },
         'performance': {
             'train_dev': train_dev_performance,
@@ -155,7 +145,7 @@ def train_model(OPT, device):
         plot_model_info(model_id, model_info, save=OPT.save)
 
 
-def run_model(OPT, device):
+def run_model(OPT, device, model_info_path):
     # Load model info & hyperparameters
     model_id = OPT.model
     model_info = load_json_with_key(model_info_path, model_id)
@@ -206,10 +196,24 @@ def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Using device: {device}")
 
+    model_info_path = "models/lstm_models_info.json"
+    default_dataset = 2
+    default_hyperparameters = {
+        "batch_size": 32,
+        "learning_rate": 1e-3,
+        "num_epochs": 5,
+        "hidden_dim": 256,
+        "dropout_prob": 0.3,
+        "use_pretrained_embeddings": False,
+        "embedding_dim": 300,
+        "n_layers": 2,
+        "bidirectional": True
+    }
+
     # Parent parser for shared arguments
     parent_parser = argparse.ArgumentParser(add_help=False)
-    parent_parser.add_argument('--dataset', '-d', help='Choose dataset to use', choices=[1, 2, 3], type=int, default=2)
-    parent_parser.add_argument('--batch_size', '-b', help='Choose number of batches', type=int, default=32)
+    parent_parser.add_argument('--dataset', '-d', help='Choose dataset to use', choices=[1, 2, 3], type=int, default=default_dataset)
+    parent_parser.add_argument('--batch_size', '-b', help='Choose number of batches', type=int, default=default_hyperparameters['batch_size'])
     parent_parser.add_argument('--notest', '-nt', action='store_true', help='Whether we don\'t evaluate on test set')
     parent_parser.add_argument('--plot', '-p', action='store_true', help='Whether we plot the model performance')
 
@@ -219,24 +223,33 @@ def main():
 
     # Subparser for training
     train_parser = subparsers.add_parser('train', parents=[parent_parser], help='Train a new model')
-    train_parser.add_argument('--learning_rate', '-r', type=float, default=1e-3)
-    train_parser.add_argument('--num_epochs', '-T', help='Choose number of episode', type=int, default=5)
-    train_parser.add_argument('--hidden_dim', '-hd', type=int, default=256)
-    train_parser.add_argument('--dropout_prob', '-dp', type=float, default=0.3)
+    train_parser.add_argument('--learning_rate', '-r', type=float, default=default_hyperparameters['learning_rate'])
+    train_parser.add_argument('--num_epochs', '-T', help='Choose number of episode', type=int, default=default_hyperparameters['num_epochs'])
+    train_parser.add_argument('--hidden_dim', '-hd', type=int, default=default_hyperparameters['hidden_dim'])
+    train_parser.add_argument('--dropout_prob', '-dp', type=float, default=default_hyperparameters['dropout_prob'])
     train_parser.add_argument('--use_pretrained_embeddings', '-pe', action='store_true', help='Whether we use pretrained word vector')
+    train_parser.add_argument('--embedding_dim', '-ed', type=int, default=default_hyperparameters['embedding_dim'])
+    train_parser.add_argument('--n_layers', '-nl', type=int, default=default_hyperparameters['n_layers'])
+    train_parser.add_argument('--bidirectional', '-bi', action='store_true', help='Whether we use bidirectional LSTM')
     train_parser.add_argument('--save', '-s', action='store_true', help='Whether we save our model')
 
     # Subparser for running existing model
     run_parser = subparsers.add_parser('run', parents=[parent_parser], help='Run an existing model')
     run_parser.add_argument('--model', '-m', required=True, help='Path to the existing model')
+
+    # Subparser for hyperparameter tuning
+    tune_parser = subparsers.add_parser('tune', parents=[parent_parser], help='Hyperparameter tuning')
+    tune_parser.add_argument('--hyperparameter', '-hp', required=True, help='Hyperparameter to tune', choices=default_hyperparameters.keys())
     
     OPT = parser.parse_args()
 
     start_time = time.time()
     if OPT.mode == 'train':
-        train_model(OPT, device)
+        train_model(OPT, device, model_info_path)
     elif OPT.mode == 'run':
-        run_model(OPT, device)
+        run_model(OPT, device, model_info_path)
+    elif OPT.mode == 'tune':
+        plot_hyperparameter_tuning(model_info_path, OPT.hyperparameter, default_hyperparameters)
     else:
         print("Invalid mode")
         parser.print_help()
