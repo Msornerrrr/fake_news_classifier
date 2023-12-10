@@ -64,6 +64,7 @@ def train_model(OPT, device):
     dropout_prob = OPT.dropout_prob  # Dropout probability
 
     # initialize model
+    model_id = None
     model = LSTMClassifier(
         vocab_size, 
         embedding_dim, 
@@ -151,7 +152,7 @@ def train_model(OPT, device):
 
     # if we decide to plot our model performance
     if OPT.plot:
-        plot_model_info(model_info)
+        plot_model_info(model_id, model_info, save=OPT.save)
 
 
 def run_model(OPT, device):
@@ -193,13 +194,12 @@ def run_model(OPT, device):
         model_info['performance']['test'].append(test_performance)
         print(f'Test Loss: {test_loss:.4f}, Test Acc: {test_acc:.4f}, Precision: {test_prec:.4f}, Recall: {test_rec:.4f}, F1: {test_f1:.4f}')
 
-        model_id = OPT.model
         add_json_with_key(model_info, model_info_path, model_id)
         print(f"Model info saved to {model_info_path}")
 
     # if we decide to plot our model performance
     if OPT.plot:
-        plot_model_info(model_info)
+        plot_model_info(model_id, model_info)
 
 def main():
     # device
