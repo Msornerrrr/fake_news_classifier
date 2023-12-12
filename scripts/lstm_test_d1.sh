@@ -26,4 +26,4 @@ for model in LSTM_2023-12-10_05-34-45 LSTM_2023-12-10_05-52-46 LSTM_2023-12-10_0
 done
 
 echo "Start running LSTM models on dataset 2..."
-$lstm_run -m 2023-12-10_07-08-39 -d 2 || { echo "Running model 2023-12-10_07-08-39 failed"; exit 1; }
+$lstm_run -m LSTM_2023-12-10_07-08-39 -d 2 || { echo "Running model 2023-12-10_07-08-39 failed"; exit 1; }
