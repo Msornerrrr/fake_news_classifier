@@ -13,17 +13,17 @@ pip install -r requirements.txt
 ## Datasets
 
 ### Import dataset
-- create empty directory with name **data**
+create an empty directory with name **data**
 - [dataset1](https://www.kaggle.com/datasets/clmentbisaillon/fake-and-real-news-dataset/data), once downloaded, add **True.csv** and **Fake.csv** to the data folder
 - [dataset2](https://www.kaggle.com/datasets/saurabhshahane/fake-news-classification/code), once downloaded, add **WELFake_Dataset.csv** to the data folder
 
-There are two dataset for this project, we can specify the project we work on.
+There are two datasets for this project, we can specify the project we work on.
 
 I provide three options:
 
-1. **dataset=1** means we're using a old dataset where news are from 2015 - 2018
+1. **dataset=1** means we're using the old dataset where news is from 2015 - 2018
 2. **dataset=2** means we're using a relatively newer dataset from WELFake
-3. **dataset=3** means we're using combination of previous two datasets
+3. **dataset=3** means we're using the combination of the previous two datasets
 
 We can specify the dataset we want to train/dev/test on by setting:
 ```
@@ -54,7 +54,7 @@ python baseline.py --method NumCaps
 
 
 ## Naive Bayes
-Run naive bayes method with default list laplace smoothing hyperparameters:
+Run the Naive Bayes method with default list Laplace smoothing hyperparameters:
 
 alphas = [1000,100,10,1,0.1,1e-2,1e-3,1e-4,1e-5,1e-6,1e-7]
 
@@ -72,14 +72,14 @@ python naive_bayes.py --alphas alpha1 alpha2 ...
 
 ### Train mode
 
-The LSTM method contain a bunch of arguments to specify certain hyperparameters during training (Check lstm.py parser for more detail on running the code)
+The LSTM method contains a bunch of arguments to specify certain hyperparameters during training (Check lstm.py parser for more detail on running the code)
 
 - learning rate
 - number of episodes
 - batch size
 - hidden layer dimension for LSTM
 - dropout probability
-- whether or not use pretrained word vector
+- whether or not to use the pre-trained word vector
 ```
 python lstm.py train --arg [val]
 ```
@@ -100,10 +100,10 @@ If we don't want to run the test (which takes time) and only want to get the spl
 python lstm.py run --model [name of model] --notest --plot
 ```
 
-I have trained multiple models (including one used in the paper), you can find them in the models subdirectory. The **models_info.json** file includes all the name, hyperparameters, and train/dev/test performance metrics.
+I have trained multiple models (including one used in the paper), you can find them in the model's subdirectory. The **models_info.json** file includes all the names, hyperparameters, and train/dev/test performance metrics.
 
 ### Tune mode
-If we want to plot different models performance for different hyperparameters, we can use the tune mode to plot the figure
+If we want to plot different models' performance for different hyperparameters, we can use the tune mode to plot the figure
 ```
 python lstm.py tune --hyperparameter [name of hyperparameter]
 ```
