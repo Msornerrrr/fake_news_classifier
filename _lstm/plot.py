@@ -71,7 +71,8 @@ def plot_model_info(model_id, model_info, save=True):
 def plot_hyperparameter_tuning(
         model_info_path, 
         hyperparameter_name, 
-        default_hyperparameters, 
+        default_hyperparameters,
+        default_dataset,
         metrics=['dev_acc', 'dev_f1'],
         save=True):
     # Load all model information
@@ -81,7 +82,7 @@ def plot_hyperparameter_tuning(
     filtered_models = {}
     for model_id, model_info in all_model_info.items():
         hyperparameters = model_info['hyperparameters']
-        if hyperparameter_name in hyperparameters:
+        if hyperparameter_name in hyperparameters and model_info['dataset'] == default_dataset:
             # Check if other hyperparameters are consistent with the default
             if all(hyperparameters.get(h, default_hyperparameters[h]) == default_hyperparameters[h] for h in default_hyperparameters if h != hyperparameter_name):
                 filtered_models[model_id] = model_info

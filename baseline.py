@@ -18,13 +18,13 @@ def run_most_common_words(X_train, y_train, X_dev, y_dev, plot=True):
     Run the MostCommonWords classifier.
     """
     best_settings = {
+        'model': None,
+        'dev_accuracy': 0,
         'top_n': 0,
         'title_weight': 0,
-        'text_weight': 0,
-        'model': None
+        'text_weight': 0
     }
     dev_results = []
-    best_accuracy = 0
     for top_n in [10, 100, 1000]:
         for title_weight in range(1, 10, 1):
             model = MostCommonWords(top_n, title_weight, text_weight=10-title_weight)
@@ -39,8 +39,8 @@ def run_most_common_words(X_train, y_train, X_dev, y_dev, plot=True):
                 'accuracy': accuracy
             })
             
-            if accuracy > best_accuracy:
-                best_accuracy = accuracy
+            if accuracy > best_settings['dev_accuracy']:
+                best_settings['dev_accuracy'] = accuracy
                 best_settings['top_n'] = top_n
                 best_settings['title_weight'] = title_weight
                 best_settings['text_weight'] = 10-title_weight
@@ -63,11 +63,11 @@ def run_num_punctuation(X_train, y_train, X_dev, y_dev, plot=True):
     Run the NumPunctuation classifier.
     """
     best_settings = {
-        'punctuations': [],
-        'model': None
+        'model': None,
+        'dev_accuracy': 0,
+        'punctuations': []
     }
     dev_results = []
-    best_accuracy = 0
     for punc in [['!', '?', '#'], ['!', '?'], ['!'], ['?']]:
         model = NumPunctuation(punctuations=punc)
         model.train(X_train, y_train)
@@ -79,8 +79,8 @@ def run_num_punctuation(X_train, y_train, X_dev, y_dev, plot=True):
             'accuracy': accuracy
         })
 
-        if accuracy > best_accuracy:
-            best_accuracy = accuracy
+        if accuracy > best_settings['dev_accuracy']:
+            best_settings['dev_accuracy'] = accuracy
             best_settings['punctuations'] = punc
             best_settings['model'] = model
 
@@ -112,10 +112,10 @@ def run_num_caps(X_train, y_train, X_dev, y_dev):
     model.train(X_train, y_train)
     y_pred = model.predict(X_dev)
     accuracy = accuracy_score(y_dev, y_pred)
-    print(f"Dev Accuracy for NumCaps: {accuracy}")
     
     return {
         'model': model,
+        'dev_accuracy': accuracy,
     }
 
 
@@ -130,9 +130,9 @@ def main():
     best_settings = None
 
     if OPT.method == 'MostCommonWords':
-        best_settings = run_most_common_words(X_train, y_train, X_dev, y_dev)
+        best_settings = run_most_common_words(X_train, y_train, X_dev, y_dev, plot=OPT.plot)
     elif OPT.method == 'NumPunctuation':
-        best_settings = run_num_punctuation(X_train, y_train, X_dev, y_dev)
+        best_settings = run_num_punctuation(X_train, y_train, X_dev, y_dev, plot=OPT.plot)
     elif OPT.method == 'NumCaps':
         best_settings = run_num_caps(X_train, y_train, X_dev, y_dev)
     else:
@@ -163,6 +163,7 @@ if __name__ == '__main__':
     parser.add_argument('--seed', '-sd', help='Random seed', type=int, default=42)
     parser.add_argument('--method', '-m', help='Choose baseline method to run', choices=['MostCommonWords', 'NumPunctuation', 'NumCaps'], required=True)
     parser.add_argument('--dataset', '-d', help='Choose dataset to use', choices=[1, 2, 3], type=int, default=2)
+    parser.add_argument('--plot', '-p', action='store_true', help='Whether we plot the model performance')
     OPT = parser.parse_args()
 
     main()

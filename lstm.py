@@ -255,7 +255,7 @@ def main():
     elif OPT.mode == 'run':
         run_model(OPT, device, model_info_path)
     elif OPT.mode == 'tune':
-        plot_hyperparameter_tuning(model_info_path, OPT.hyperparameter, default_hyperparameters, metrics=OPT.metrics)
+        plot_hyperparameter_tuning(model_info_path, OPT.hyperparameter, default_hyperparameters, default_dataset, metrics=OPT.metrics)
     else:
         print("Invalid mode")
         parser.print_help()
